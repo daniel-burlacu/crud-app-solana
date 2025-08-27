@@ -13,7 +13,7 @@ url = "https://api.apr.dev"
 
 [provider]
 cluster = "localnet"
-wallet = "~/.config/solana/id.json"
+wallet  = "/home/dani/.config/solana/wallets/mainwallet.json"
 
 [scripts]
 test = "vitest"
