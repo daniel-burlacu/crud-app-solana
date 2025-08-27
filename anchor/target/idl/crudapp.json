@@ -1,5 +1,5 @@
 {
-  "address": "JAVuBXeBZqXNtS73azhBDAoYaaAFfo4gWXoZe2e7Jf8H",
+  "address": "2wtMCx1PDGqCHfCYnfKrhQRrANFWeMxNSr7eAPJrhrmv",
   "metadata": {
     "name": "crudapp",
     "version": "0.1.0",
@@ -8,10 +8,200 @@
   },
   "instructions": [
     {
-      "name": "greet",
-      "discriminator": [203, 194, 3, 150, 228, 58, 181, 62],
-      "accounts": [],
-      "args": []
+      "name": "create_journal_entry",
+      "discriminator": [
+        48,
+        65,
+        201,
+        186,
+        25,
+        41,
+        127,
+        0
+      ],
+      "accounts": [
+        {
+          "name": "journal_entry_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "arg",
+                "path": "title"
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "message",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "delete_journal_entry",
+      "discriminator": [
+        156,
+        50,
+        93,
+        5,
+        157,
+        97,
+        188,
+        114
+      ],
+      "accounts": [
+        {
+          "name": "journal_entry_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "arg",
+                "path": "title"
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "journal_entry_state"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "title",
+          "type": "string"
+        }
+      ]
+    },
+    {
+      "name": "update_journal_entry",
+      "discriminator": [
+        113,
+        164,
+        49,
+        62,
+        43,
+        83,
+        194,
+        172
+      ],
+      "accounts": [
+        {
+          "name": "journal_entry_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "arg",
+                "path": "title"
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "journal_entry_state"
+          ]
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "message",
+          "type": "string"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "JournalEntryState",
+      "discriminator": [
+        113,
+        86,
+        110,
+        124,
+        140,
+        14,
+        58,
+        66
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "TitleImmutable",
+      "msg": "Title is immutable because it is part of the address seed."
+    }
+  ],
+  "types": [
+    {
+      "name": "JournalEntryState",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "title",
+            "type": "string"
+          },
+          {
+            "name": "message",
+            "type": "string"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          }
+        ]
+      }
     }
   ]
 }
