@@ -2,7 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Scaffold</title>
+    <motion.h1
+  className="text-3xl md:text-4xl font-extrabold tracking-tight"
+  initial={{ y: -8, opacity: 0 }}
+  animate={{ y: 0, opacity: 1 }}
+  transition={{ type: 'spring', stiffness: 120, damping: 12 }}
+>
+  ✏️ My Sparkly Journal
+</motion.h1>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
     <link rel="icon" href="/favicon.ico" type="image/x-icon" />
   </head>

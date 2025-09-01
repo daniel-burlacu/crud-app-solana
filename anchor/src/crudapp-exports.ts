@@ -1,5 +1,5 @@
 // Here we export some useful types and functions for interacting with the Anchor program.
-import { Account, address, getBase58Decoder, SolanaClient } from 'gill'
+import { Account, address, getBase58Decoder, SolanaClient, type Address } from 'gill'
 import { SolanaClusterId } from '@wallet-ui/react'
 import { getProgramAccountsDecoded } from './helpers/get-program-accounts-decoded'
 import { Crudapp, CRUDAPP_DISCRIMINATOR, CRUDAPP_PROGRAM_ADDRESS, getCrudappDecoder } from './client/js'
@@ -15,8 +15,9 @@ export function getCrudappProgramId(cluster: SolanaClusterId) {
   switch (cluster) {
     case 'solana:devnet':
     case 'solana:testnet':
+    case 'solana:localnet':
       // This is the program ID for the Crudapp program on devnet and testnet.
-      return address('6z68wfurCMYkZG51s1Et9BJEd9nJGUusjHXNt4dGbNNF')
+      return address('8bgEPmmRk3N7Wtz1srGiz7BQ6ojG4cVhGHndnASiUQGQ')
     case 'solana:mainnet':
     default:
       return CRUDAPP_PROGRAM_ADDRESS
@@ -25,10 +26,13 @@ export function getCrudappProgramId(cluster: SolanaClusterId) {
 
 export * from './client/js'
 
-export function getCrudappProgramAccounts(rpc: SolanaClient['rpc']) {
+export function getCrudappProgramAccounts(
+  programId: Address,                         // <— use Address
+  rpc: SolanaClient['rpc']
+) {
   return getProgramAccountsDecoded(rpc, {
     decoder: getCrudappDecoder(),
     filter: getBase58Decoder().decode(CRUDAPP_DISCRIMINATOR),
-    programAddress: CRUDAPP_PROGRAM_ADDRESS,
+    programAddress: programId,                // <— use the argument, not the constant
   })
 }

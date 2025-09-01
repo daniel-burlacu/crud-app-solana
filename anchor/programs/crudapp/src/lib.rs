@@ -1,70 +1,46 @@
+#![allow(unexpected_cfgs)]
 #![allow(clippy::result_large_err)]
+#![allow(clippy::too_many_arguments)]
 
 use anchor_lang::prelude::*;
 
-declare_id!("JAVuBXeBZqXNtS73azhBDAoYaaAFfo4gWXoZe2e7Jf8H");
+pub mod constants;
+pub mod errors;
+pub mod entity;
+pub mod context;
+pub mod instructions;
+
+pub use context::*;
+pub use entity::*;
+
+declare_id!("8bgEPmmRk3N7Wtz1srGiz7BQ6ojG4cVhGHndnASiUQGQ");
 
 #[program]
 pub mod crudapp {
     use super::*;
 
-    pub fn close(_ctx: Context<CloseCrudapp>) -> Result<()> {
-        Ok(())
+    pub fn create_journal_entry(
+        ctx: Context<CreateJournalEntry>,
+        title: String,
+        message: String,
+    ) -> Result<()> {
+        instructions::create_journal_entry::handler(ctx, title, message)
     }
 
-    pub fn decrement(ctx: Context<Update>) -> Result<()> {
-        ctx.accounts.crudapp.count = ctx.accounts.crudapp.count.checked_sub(1).unwrap();
-        Ok(())
+    // NOTE: title is part of the PDA seeds (see accounts). That makes it effectively
+    // immutable. We keep it as a parameter because the seeds use it to find the PDA.
+    pub fn update_journal_entry(
+        ctx: Context<UpdateJournalEntry>,
+        title: String,
+        message: String,
+    ) -> Result<()> {
+        instructions::update_journal_entry::handler(ctx, title, message)
     }
 
-    pub fn increment(ctx: Context<Update>) -> Result<()> {
-        ctx.accounts.crudapp.count = ctx.accounts.crudapp.count.checked_add(1).unwrap();
-        Ok(())
+    pub fn delete_journal_entry(
+        ctx: Context<DeleteJournalEntry>,
+        title: String,
+    ) -> Result<()> {
+        instructions::delete_journal_entry::handler(ctx, title)
     }
-
-    pub fn initialize(_ctx: Context<InitializeCrudapp>) -> Result<()> {
-        Ok(())
-    }
-
-    pub fn set(ctx: Context<Update>, value: u8) -> Result<()> {
-        ctx.accounts.crudapp.count = value.clone();
-        Ok(())
-    }
-}
-
-#[derive(Accounts)]
-pub struct InitializeCrudapp<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    #[account(
-  init,
-  space = 8 + Crudapp::INIT_SPACE,
-  payer = payer
-    )]
-    pub crudapp: Account<'info, Crudapp>,
-    pub system_program: Program<'info, System>,
-}
-#[derive(Accounts)]
-pub struct CloseCrudapp<'info> {
-    #[account(mut)]
-    pub payer: Signer<'info>,
-
-    #[account(
-  mut,
-  close = payer, // close account and return lamports to payer
-    )]
-    pub crudapp: Account<'info, Crudapp>,
-}
-
-#[derive(Accounts)]
-pub struct Update<'info> {
-    #[account(mut)]
-    pub crudapp: Account<'info, Crudapp>,
-}
-
-#[account]
-#[derive(InitSpace)]
-pub struct Crudapp {
-    count: u8,
 }

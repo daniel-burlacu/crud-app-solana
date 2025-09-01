@@ -1,0 +1,4 @@
+@keyframes twinkle {
+  0%, 100% { opacity: .35; filter: drop-shadow(0 0 0px rgba(255,255,255,.2)); }
+  50%      { opacity: .75; filter: drop-shadow(0 0 2px rgba(255,255,255,.6)); }
+}

@@ -22,7 +22,7 @@ import {
 } from '../instructions';
 
 export const CRUDAPP_PROGRAM_ADDRESS =
-  'JAVuBXeBZqXNtS73azhBDAoYaaAFfo4gWXoZe2e7Jf8H' as Address<'JAVuBXeBZqXNtS73azhBDAoYaaAFfo4gWXoZe2e7Jf8H'>;
+  '8bgEPmmRk3N7Wtz1srGiz7BQ6ojG4cVhGHndnASiUQGQ' as Address<'8bgEPmmRk3N7Wtz1srGiz7BQ6ojG4cVhGHndnASiUQGQ'>;
 
 export enum CrudappAccount {
   Crudapp,
@@ -121,7 +121,7 @@ export function identifyCrudappInstruction(
 }
 
 export type ParsedCrudappInstruction<
-  TProgram extends string = 'JAVuBXeBZqXNtS73azhBDAoYaaAFfo4gWXoZe2e7Jf8H',
+  TProgram extends string = '8bgEPmmRk3N7Wtz1srGiz7BQ6ojG4cVhGHndnASiUQGQ',
 > =
   | ({
       instructionType: CrudappInstruction.Close;

@@ -9,10 +9,7 @@ export function ExplorerLink({
   className,
   label = '',
   ...link
-}: GetExplorerLinkArgs & {
-  className?: string
-  label: string
-}) {
+}: (GetExplorerLinkArgs & { className?: string; label: string })) {
   const { cluster } = useWalletUi()
   return (
     <a

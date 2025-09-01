@@ -1,155 +1,210 @@
-import { ellipsify } from '@wallet-ui/react'
+// src/components/crudapp/crudapp-ui.tsx
+import { useEffect, useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import { ExplorerLink, ClusterChecker } from '@/components/cluster/cluster-ui'
+
 import {
   useCrudappAccountsQuery,
-  useCrudappCloseMutation,
-  useCrudappDecrementMutation,
-  useCrudappIncrementMutation,
-  useCrudappInitializeMutation,
-  useCrudappProgram,
-  useCrudappProgramId,
-  useCrudappSetMutation,
-} from './crudapp-data-access'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { ExplorerLink } from '../cluster/cluster-ui'
-import { CrudappAccount } from '@project/anchor'
-import { ReactNode } from 'react'
+  useCreateJournalMutation,
+  useUpdateJournalMessageMutation,
+  useDeleteJournalMutation,
+} from '@/components/crudapp/crudapp-data-access'
 
-export function CrudappProgramExplorerLink() {
-  const programId = useCrudappProgramId()
-
-  return <ExplorerLink address={programId.toString()} label={ellipsify(programId.toString())} />
+export default function JournalPage() {
+  return (
+    <ClusterChecker>
+      <JournalInner />
+    </ClusterChecker>
+  )
 }
 
-export function CrudappList() {
-  const crudappAccountsQuery = useCrudappAccountsQuery()
+function JournalInner() {
+  const { data, isLoading, isError, refetch } = useCrudappAccountsQuery()
+  const createMut = useCreateJournalMutation()
+  const updateMut = useUpdateJournalMessageMutation()
+  const deleteMut = useDeleteJournalMutation()
 
-  if (crudappAccountsQuery.isLoading) {
-    return <span className="loading loading-spinner loading-lg"></span>
-  }
+  const [title, setTitle] = useState('')
+  const [message, setMessage] = useState('')
 
-  if (!crudappAccountsQuery.data?.length) {
+  if (isLoading) return <div className="p-4">Loading journals…</div>
+  if (isError)
     return (
-      <div className="text-center">
-        <h2 className={'text-2xl'}>No accounts</h2>
-        No accounts found. Initialize one to get started.
+      <div className="p-4">
+        Failed to load journals.{' '}
+        <Button variant="outline" onClick={() => refetch()}>
+          Retry
+        </Button>
       </div>
     )
-  }
 
   return (
-    <div className="grid lg:grid-cols-2 gap-4">
-      {crudappAccountsQuery.data?.map((crudapp) => (
-        <CrudappCard key={crudapp.address} crudapp={crudapp} />
-      ))}
+    <div className="max-w-3xl mx-auto p-4 space-y-6 bg-gradient-to-br from-pink-200 via-pink-100 to-blue-100 rounded-lg shadow-md">
+      <h1 className="text-2xl font-bold">Journal</h1>
+
+      {/* Create */}
+      <Card className="p-4 space-y-3 bg-pink-200 shadow-inner">
+        <h2 className="font-semibold">New entry</h2>
+        <input
+          className="w-full border rounded px-3 py-2 text-sm bg-white"  // 👈 stays white
+          placeholder="Title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          disabled={createMut.isPending}
+        />
+        <textarea
+          className="w-full border rounded px-3 py-2 text-sm bg-white" // 👈 stays white
+          placeholder="Write your thoughts…"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          rows={5}
+          disabled={createMut.isPending}
+        />
+        <div className="flex items-center gap-2">
+          <Button
+            disabled={!title || !message || createMut.isPending}
+            onClick={async () => {
+              await createMut.mutateAsync({ title, message })
+              setTitle('')
+              setMessage('')
+            }}
+          >
+            {createMut.isPending ? 'Creating…' : 'Create'}
+          </Button>
+          {createMut.data ? (
+            <ExplorerLink label="View tx" address={createMut.data!} />
+          ) : null}
+        </div>
+      </Card>
+
+      {/* List */}
+      <div className="space-y-3">
+        {(data ?? []).length === 0 ? (
+          <div className="text-muted-foreground">No entries yet.</div>
+        ) : (
+          data!.map((acc: any) => (
+            <JournalRow
+              key={acc.pubkey ?? acc.address}
+              pubkey={(acc.pubkey ?? acc.address) as string}
+              title={(acc.account?.title ?? acc.data?.title ?? '(untitled)') as string}
+              message={(acc.account?.message ?? acc.data?.message ?? '') as string}
+              onUpdate={async (newMsg) => {
+                await updateMut.mutateAsync({
+                  crudappPubkey: (acc.pubkey ?? acc.address) as string,
+                  title: (acc.account?.title ?? acc.data?.title ?? '') as string,
+                  message: newMsg,
+                })
+              }}
+              onDelete={async () => {
+                await deleteMut.mutateAsync({
+                  crudappPubkey: (acc.pubkey ?? acc.address) as string,
+                  title: (acc.account?.title ?? acc.data?.title ?? '') as string,
+                })
+              }}
+              lastTxSig={updateMut.data ?? deleteMut.data}
+            />
+          ))
+        )}
+      </div>
     </div>
   )
 }
 
-export function CrudappProgramGuard({ children }: { children: ReactNode }) {
-  const programAccountQuery = useCrudappProgram()
+function JournalRow({
+  pubkey,
+  title,
+  message,
+  onUpdate,
+  onDelete,
+  lastTxSig,
+  deletePending,
+}: {
+  pubkey: string
+  title: string
+  message: string
+  onUpdate: (newMessage: string) => Promise<void>
+  onDelete: () => Promise<void>
+  lastTxSig?: string | null
+  deletePending?: boolean
+}) {
+  const [edit, setEdit] = useState(false)
+  const [draft, setDraft] = useState(message)
+  const [saving, setSaving] = useState(false)
 
-  if (programAccountQuery.isLoading) {
-    return <span className="loading loading-spinner loading-lg"></span>
-  }
+  useEffect(() => {
+    if (!edit) setDraft(message)
+  }, [message, edit])
 
-  if (!programAccountQuery.data?.value) {
-    return (
-      <div className="alert alert-info flex justify-center">
-        <span>Program account not found. Make sure you have deployed the program and are on the correct cluster.</span>
-      </div>
-    )
-  }
+  const canSave = edit && !saving && draft.trim() !== '' && draft !== message
 
-  return children
-}
-
-function CrudappCard({ crudapp }: { crudapp: CrudappAccount }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Crudapp: {crudapp.data.count}</CardTitle>
-        <CardDescription>
-          Account: <ExplorerLink address={crudapp.address} label={ellipsify(crudapp.address)} />
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <div className="flex gap-4 justify-evenly">
-          <CrudappButtonIncrement crudapp={crudapp} />
-          <CrudappButtonSet crudapp={crudapp} />
-          <CrudappButtonDecrement crudapp={crudapp} />
-          <CrudappButtonClose crudapp={crudapp} />
+    <Card className="p-4 space-y-2 bg-gradient-to-r from-blue-100 via-pink-100 to-blue-200 shadow">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <div className="font-semibold truncate">{title}</div>
+          <div className="text-xs text-muted-foreground truncate">{pubkey}</div>
         </div>
-      </CardContent>
+        {lastTxSig ? <ExplorerLink label="Last tx" address={lastTxSig} /> : null}
+      </div>
+
+      {edit ? (
+        <div className="space-y-2">
+          <textarea
+            className="w-full border rounded px-3 py-2 text-sm bg-white disabled:opacity-60 disabled:cursor-not-allowed" // 👈 stays white
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            rows={4}
+            disabled={saving}
+            aria-busy={saving}
+          />
+          <div className="flex gap-2">
+            <Button
+              variant="secondary"
+              disabled={!canSave}
+              onClick={async () => {
+                try {
+                  setSaving(true)
+                  await onUpdate(draft)
+                  setEdit(false)
+                } finally {
+                  setSaving(false)
+                }
+              }}
+            >
+              {saving ? 'Saving…' : 'Save'}
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={() => {
+                if (saving) return
+                setDraft(message)
+                setEdit(false)
+              }}
+              disabled={saving}
+            >
+              Cancel
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="whitespace-pre-wrap text-sm">{message}</div>
+      )}
+
+      {!edit && (
+        <div className="flex gap-2 pt-2">
+          <Button variant="secondary" onClick={() => setEdit(true)}>
+            Edit message
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={onDelete}
+            disabled={deletePending}
+          >
+            {deletePending ? 'Deleting…' : 'Delete'}
+          </Button>
+        </div>
+      )}
     </Card>
-  )
-}
-
-export function CrudappButtonInitialize() {
-  const mutationInitialize = useCrudappInitializeMutation()
-
-  return (
-    <Button onClick={() => mutationInitialize.mutateAsync()} disabled={mutationInitialize.isPending}>
-      Initialize Crudapp {mutationInitialize.isPending && '...'}
-    </Button>
-  )
-}
-
-export function CrudappButtonIncrement({ crudapp }: { crudapp: CrudappAccount }) {
-  const incrementMutation = useCrudappIncrementMutation({ crudapp })
-
-  return (
-    <Button variant="outline" onClick={() => incrementMutation.mutateAsync()} disabled={incrementMutation.isPending}>
-      Increment
-    </Button>
-  )
-}
-
-export function CrudappButtonSet({ crudapp }: { crudapp: CrudappAccount }) {
-  const setMutation = useCrudappSetMutation({ crudapp })
-
-  return (
-    <Button
-      variant="outline"
-      onClick={() => {
-        const value = window.prompt('Set value to:', crudapp.data.count.toString() ?? '0')
-        if (!value || parseInt(value) === crudapp.data.count || isNaN(parseInt(value))) {
-          return
-        }
-        return setMutation.mutateAsync(parseInt(value))
-      }}
-      disabled={setMutation.isPending}
-    >
-      Set
-    </Button>
-  )
-}
-
-export function CrudappButtonDecrement({ crudapp }: { crudapp: CrudappAccount }) {
-  const decrementMutation = useCrudappDecrementMutation({ crudapp })
-
-  return (
-    <Button variant="outline" onClick={() => decrementMutation.mutateAsync()} disabled={decrementMutation.isPending}>
-      Decrement
-    </Button>
-  )
-}
-
-export function CrudappButtonClose({ crudapp }: { crudapp: CrudappAccount }) {
-  const closeMutation = useCrudappCloseMutation({ crudapp })
-
-  return (
-    <Button
-      variant="destructive"
-      onClick={() => {
-        if (!window.confirm('Are you sure you want to close this account?')) {
-          return
-        }
-        return closeMutation.mutateAsync()
-      }}
-      disabled={closeMutation.isPending}
-    >
-      Close
-    </Button>
   )
 }

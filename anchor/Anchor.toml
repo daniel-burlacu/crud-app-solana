@@ -6,14 +6,14 @@ resolution = true
 skip-lint = false
 
 [programs.localnet]
-crudapp = "JAVuBXeBZqXNtS73azhBDAoYaaAFfo4gWXoZe2e7Jf8H"
+crudapp = "8bgEPmmRk3N7Wtz1srGiz7BQ6ojG4cVhGHndnASiUQGQ"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
 cluster = "localnet"
-wallet = "~/.config/solana/id.json"
+wallet = "~/.config/solana/wallets/test_wallet.json"
 
 [scripts]
 test = "vitest"
