@@ -4,12 +4,11 @@ import { lazy } from 'react'
 const AccountDetailFeature = lazy(() => import('@/components/account/account-feature-detail.tsx'))
 const AccountIndexFeature = lazy(() => import('@/components/account/account-feature-index.tsx'))
 const CrudappFeature = lazy(() => import('@/components/crudapp/crudapp-feature'))
-const DashboardFeature = lazy(() => import('@/components/dashboard/dashboard-feature'))
 
 export function AppRoutes() {
   const navigate = useNavigate()
   return useRoutes([
-    { index: true, element: <DashboardFeature /> },
+    { index: true, element: <CrudappFeature /> },
     {
       path: 'account',
       children: [
@@ -26,10 +25,6 @@ export function AppRoutes() {
         },
         { path: ':address', element: <AccountDetailFeature /> },
       ],
-    },
-    {
-      path: 'crudapp',
-      element: <CrudappFeature />,
     },
   ])
 }

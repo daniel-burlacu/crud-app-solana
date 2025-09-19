@@ -118,6 +118,9 @@ export function useCreateJournalMutation() {
       await waitForFinalized(client, sig)     // wait so refetch includes new PDA
       await invalidate()
     },
+    onError: (err) => {
+      toast.error('Failed to create: ' + (err?.message ?? err)
+  )}
   })
 }
 /** Update: modify message */
@@ -145,8 +148,6 @@ export function useUpdateJournalMessageMutation() {
       const sig = await signAndSend(sanitizedIx as any, owner)
       return typeof sig === 'string' ? sig : String(sig)
     },
-
-    // Optimistic UI right away
     onMutate: async ({ crudappPubkey, message }) => {
       await qc.cancelQueries({ queryKey: crudappAccountsKey(cluster.id) })
       const prev = qc.getQueryData<any[]>(crudappAccountsKey(cluster.id))

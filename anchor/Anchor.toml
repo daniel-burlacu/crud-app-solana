@@ -5,15 +5,17 @@ package_manager = "yarn"
 resolution = true
 skip-lint = false
 
-[programs.localnet]
+[programs.devnet]
 crudapp = "8bgEPmmRk3N7Wtz1srGiz7BQ6ojG4cVhGHndnASiUQGQ"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "localnet"
-wallet = "~/.config/solana/wallets/test_wallet.json"
+cluster = "devnet"
+wallet = "/home/dani/.config/solana/wallets/test_wallet.json"
+# (optional) you can force a specific RPC if you want:
+# url = "https://api.devnet.solana.com"
 
 [scripts]
 test = "vitest"

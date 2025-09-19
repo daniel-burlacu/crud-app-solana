@@ -4,9 +4,8 @@ import { AppRoutes } from '@/app-routes.tsx'
 
 const links: { label: string; path: string }[] = [
   //
-  { label: 'Home', path: '/' },
   { label: 'Account', path: '/account' },
-  { label: 'Crudapp Program', path: '/crudapp' },
+  { label: 'Portofolio', path: 'https://danielburlacu.xyz/blockchains' },
 ]
 
 export function App() {
