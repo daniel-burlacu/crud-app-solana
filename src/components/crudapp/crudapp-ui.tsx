@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { ExplorerLink, ClusterChecker } from '@/components/cluster/cluster-ui'
+import { useWalletUi } from '@wallet-ui/react'
 
 import {
   useCrudappAccountsQuery,
@@ -27,6 +28,7 @@ function JournalInner() {
 
   const [title, setTitle] = useState('')
   const [message, setMessage] = useState('')
+  const [txSigs, setTxSigs] = useState<Record<string, string>>({})
 
   if (isLoading) return <div className="p-4">Loading journals…</div>
   if (isError)
@@ -47,14 +49,14 @@ function JournalInner() {
       <Card className="p-4 space-y-3 bg-pink-200 shadow-inner">
         <h2 className="font-semibold">New entry</h2>
         <input
-          className="w-full border rounded px-3 py-2 text-sm bg-white"  // 👈 stays white
+          className="w-full border rounded px-3 py-2 text-sm bg-white"
           placeholder="Title"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           disabled={createMut.isPending}
         />
         <textarea
-          className="w-full border rounded px-3 py-2 text-sm bg-white" // 👈 stays white
+          className="w-full border rounded px-3 py-2 text-sm bg-white"
           placeholder="Write your thoughts…"
           value={message}
           onChange={(e) => setMessage(e.target.value)}
@@ -65,7 +67,12 @@ function JournalInner() {
           <Button
             disabled={!title || !message || createMut.isPending}
             onClick={async () => {
-              await createMut.mutateAsync({ title, message })
+              const sig = await createMut.mutateAsync({ title, message })
+              // store tx sig under derived pubkey
+              if (sig) {
+                const pubkey = createMut.variables?.title ?? title
+                setTxSigs((prev) => ({ ...prev, [pubkey]: sig }))
+              }
               setTitle('')
               setMessage('')
             }}
@@ -83,28 +90,33 @@ function JournalInner() {
         {(data ?? []).length === 0 ? (
           <div className="text-muted-foreground">No entries yet.</div>
         ) : (
-          data!.map((acc: any) => (
-            <JournalRow
-              key={acc.pubkey ?? acc.address}
-              pubkey={(acc.pubkey ?? acc.address) as string}
-              title={(acc.account?.title ?? acc.data?.title ?? '(untitled)') as string}
-              message={(acc.account?.message ?? acc.data?.message ?? '') as string}
-              onUpdate={async (newMsg) => {
-                await updateMut.mutateAsync({
-                  crudappPubkey: (acc.pubkey ?? acc.address) as string,
-                  title: (acc.account?.title ?? acc.data?.title ?? '') as string,
-                  message: newMsg,
-                })
-              }}
-              onDelete={async () => {
-                await deleteMut.mutateAsync({
-                  crudappPubkey: (acc.pubkey ?? acc.address) as string,
-                  title: (acc.account?.title ?? acc.data?.title ?? '') as string,
-                })
-              }}
-              lastTxSig={updateMut.data ?? deleteMut.data}
-            />
-          ))
+          data!.map((acc: any) => {
+            const pubkey = (acc.pubkey ?? acc.address) as string
+            return (
+              <JournalRow
+                key={pubkey}
+                pubkey={pubkey}
+                title={(acc.account?.title ?? acc.data?.title ?? '(untitled)') as string}
+                message={(acc.account?.message ?? acc.data?.message ?? '') as string}
+                onUpdate={async (newMsg) => {
+                  const sig = await updateMut.mutateAsync({
+                    crudappPubkey: pubkey,
+                    title: (acc.account?.title ?? acc.data?.title ?? '') as string,
+                    message: newMsg,
+                  })
+                  if (sig) setTxSigs((prev) => ({ ...prev, [pubkey]: sig }))
+                }}
+                onDelete={async () => {
+                  const sig = await deleteMut.mutateAsync({
+                    crudappPubkey: pubkey,
+                    title: (acc.account?.title ?? acc.data?.title ?? '') as string,
+                  })
+                  if (sig) setTxSigs((prev) => ({ ...prev, [pubkey]: sig }))
+                }}
+                lastTxSig={txSigs[pubkey]}
+              />
+            )
+          })
         )}
       </div>
     </div>
@@ -131,12 +143,19 @@ function JournalRow({
   const [edit, setEdit] = useState(false)
   const [draft, setDraft] = useState(message)
   const [saving, setSaving] = useState(false)
+  const { cluster } = useWalletUi()
 
   useEffect(() => {
     if (!edit) setDraft(message)
   }, [message, edit])
 
   const canSave = edit && !saving && draft.trim() !== '' && draft !== message
+
+  const explorerUrl = (path: string) => {
+    const id = cluster.id.includes(':') ? cluster.id.split(':')[1] : cluster.id
+    const qp = id && id !== 'mainnet-beta' && id !== 'mainnet' ? `?cluster=${id}` : ''
+    return `https://explorer.solana.com/${path}${qp}`
+  }
 
   return (
     <Card className="p-4 space-y-2 bg-gradient-to-r from-blue-100 via-pink-100 to-blue-200 shadow">
@@ -145,13 +164,32 @@ function JournalRow({
           <div className="font-semibold truncate">{title}</div>
           <div className="text-xs text-muted-foreground truncate">{pubkey}</div>
         </div>
-        {lastTxSig ? <ExplorerLink label="Last tx" address={lastTxSig} /> : null}
+
+        {lastTxSig ? (
+          <a
+            href={explorerUrl(`tx/${lastTxSig}`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-medium text-blue-600 hover:underline"
+          >
+            View tx
+          </a>
+        ) : (
+          <a
+            href={explorerUrl(`address/${pubkey}`)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs font-medium text-blue-600 hover:underline"
+          >
+            View account
+          </a>
+        )}
       </div>
 
       {edit ? (
         <div className="space-y-2">
           <textarea
-            className="w-full border rounded px-3 py-2 text-sm bg-white disabled:opacity-60 disabled:cursor-not-allowed" // 👈 stays white
+            className="w-full border rounded px-3 py-2 text-sm bg-white disabled:opacity-60 disabled:cursor-not-allowed"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             rows={4}
